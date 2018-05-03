@@ -1,6 +1,5 @@
 #include <iostream>
 #include <iomanip>
-#include <random>
 
 #include <thread>
 #include <mutex>
@@ -9,7 +8,7 @@
 #include <chrono>
 #include <vector>
 
-int const COUNT_THREAD   = 8;
+int const COUNT_THREAD   = 40;
 int const MS_TIME_SLEEP  = 100;
 int const COUNT_COMPUTES = 10;
 
@@ -57,8 +56,8 @@ void compute(std::queue<int>& result, int id)
 
         std::unique_lock<std::mutex> lock(m);
         cond_var.wait(lock, [id] () { return id == current_thread; });
-        result.push(id * (i + 1));
-        current_thread = (current_thread == COUNT_THREAD) ? 1 :  current_thread + 1;
+        result.push(id);
+        current_thread = (current_thread == COUNT_THREAD) ? 1 : current_thread + 1;
         cond_var.notify_all();
     }
 }

@@ -13,30 +13,29 @@ int const MS_TIME_SLEEP  = 100;
 int const COUNT_COMPUTES = 10;
 
 std::mutex m;
-std::condition_variable cond_var;
-int current_thread = 1;
+std::condition_variable condVar;
+int idCurrentThread = 0; // id of current thread that push to queue
 
 void compute(std::queue<int>& result, int id);
 
 int main()
 {
     std::vector<std::thread> workers;
-    std::queue<int> q;
-    
+    std::queue<int> q;  
 
     for (int i = 0; i < COUNT_THREAD; i++) {
-        workers.emplace_back(compute, std::ref(q), i + 1);
+        workers.emplace_back(compute, std::ref(q), i);
     }
 
-    cond_var.notify_one();
+    condVar.notify_one();
 
-    for (auto& w : workers) {
+    for (auto& w : workers) { // wait all threads
         w.join();
     }
 
     int i = 0;
-    while (!q.empty()) {
-        std::cout << std::setw(3) << q.front() << " ";
+    while (!q.empty()) { // print queue
+        std::cout << std::setw(2) << q.front() << " ";
         q.pop();
         i++;
         
@@ -52,12 +51,12 @@ int main()
 void compute(std::queue<int>& result, int id)
 {
     for (int i = 0; i < COUNT_COMPUTES; i++) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(MS_TIME_SLEEP));
+        std::this_thread::sleep_for(std::chrono::milliseconds(MS_TIME_SLEEP)); // fake compute
 
         std::unique_lock<std::mutex> lock(m);
-        cond_var.wait(lock, [id] () { return id == current_thread; });
-        result.push(id);
-        current_thread = (current_thread == COUNT_THREAD) ? 1 : current_thread + 1;
-        cond_var.notify_all();
+        condVar.wait(lock, [id] () { return id == idCurrentThread; }); // wait previos thread
+        result.push(id); // push id of thread
+        idCurrentThread = (idCurrentThread < COUNT_THREAD - 1) ? idCurrentThread + 1 : 0;
+        condVar.notify_all();
     }
 }

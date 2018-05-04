@@ -15,8 +15,7 @@ int const COUNT_COMPUTES  = 10;
 
 std::mutex m;
 std::condition_variable condVar;
-int idCurrentThread; // id of current thread that push to queue
-bool isRun = false;
+int idCurrentThread = ID_FIRST_THREAD; // id of current thread that push to queue
 
 void compute(std::queue<int>& result, int id);
 
@@ -25,7 +24,7 @@ int main()
     std::vector<std::thread> workers;
     std::queue<int> q;  
 
-    for (int i = COUNT_THREAD - 1; i >= 0; i--) { // create in revevrce sequence (ony for test)
+    for (int i = COUNT_THREAD - 1; i >= 0; i--) { // create in reverse sequence (only for test)
         workers.emplace_back(compute, std::ref(q), i);
     }
 
@@ -50,20 +49,8 @@ int main()
 
 void compute(std::queue<int>& result, int id)
 {
-    if (id == ID_FIRST_THREAD) {
-        idCurrentThread = ID_FIRST_THREAD;
-        isRun = true;
-    }
-
-    { // scope for create unique_lock
-        std::unique_lock<std::mutex> lock(m);
-        condVar.wait(lock, [] () { return isRun; }); // wait first thread
-    }
-    
-    
     for (int i = 0; i < COUNT_COMPUTES; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(MS_TIME_SLEEP)); // fake compute
-
         std::unique_lock<std::mutex> lock(m);
         condVar.wait(lock, [id] () { return id == idCurrentThread; } ); // wait previos thread
         result.push(id); // push id of thread
